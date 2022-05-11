@@ -1,0 +1,215 @@
+<!DOCTYPE html>
+<html lang="pt-br">
+<head>
+    <meta charset="UTF-8">
+    <meta http-equiv="X-UA-Compatible" content="IE=edge">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Transporte API</title>
+    <style>
+        .content_all_graph {
+            border: 1px solid black; border-radius: 20px; margin: auto;
+            display: flex; flex-direction: row; width: 90%; padding: 20px;
+            flex-wrap: wrap; margin-bottom: 50px; padding-top: 70px; position: relative;
+        }
+
+        .content_all_graph h1 {
+            position: absolute; top: 0%; left: 20px;
+        }
+
+        .content_all_graph .content_graph {
+            border: 1px solid black ; margin: 2px; height: auto;
+            padding: 15px; width: 90px; border-radius: 10px;
+        }
+
+        .content_all_graph .content_graph div {
+            display: flex; justify-content: space-between;
+        }
+        .buscar_caminho .grafosDisponiveis {
+            width: 500px; padding: 20px; border: 1px solid black;
+            border-radius: 10px; margin: auto; margin-bottom: 20px; margin-top: -20px;
+        }
+        .grafosDisponiveis .content_grafos {display: flex;}
+        .grafosDisponiveis .content_grafos .grafo {
+            border: 1px solid black; border-radius: 5px; padding: 10px; width: 50px;
+        }
+        #rotasDisponiveis {
+            border: 1px solid blue; margin: 10px; padding: 10px;
+        }
+        #rotasDisponiveis #infoSourceTarget {
+            display: flex; border: 1px solid blue; align-items: center;
+            justify-content: center; margin: 10px;
+        }
+        #rotasDisponiveis #infoSourceTarget div {
+            border-radius: 3px; border: 1px solid black;
+            padding: 10px; margin: 4px;
+        }
+        #rotasDisponiveis #routes #rota {
+            border-radius: 3px; border: 1px solid black;
+            padding: 10px; margin: 4px;
+        }
+    </style>
+</head>
+<body>
+    <h1>Transporte API</h1>
+    <div class="content_all_graph">
+        <h1>Todos os Graphs registrados: </h1>
+    </div>
+    
+    <div class="buscar_caminho">
+        <div class="grafosDisponiveis">
+            <h2>Grafos disponíveis:</h2>
+            <div class="content_grafos"></div>
+            
+        </div>
+        <label id="grafo" for="graphId">Informe o id do grafo (graphId):</label>
+        <input class="input_graphId" type="text" id="graphId">
+
+        <label for="source">Informe o ponto de partida (source):</label>
+        <input class="input_source" type="text" id="source">
+
+        <label for="target">Informe o ponto de chegada (target):</label>
+        <input class="input_target" type="text" id="target">
+
+        <select id="maxStops">
+            <option value="3" selected="true">3</option>
+            <option value="2">2</option>
+            <option value="1">1</option>
+        </select>
+
+        <select id="rotasDistancia">
+            <option selected="true" value="routes">Todas as rotas</option>
+            <option value="distance">Menor distancia</option>
+        </select>
+
+        <button id="buscar_caminho_button">Buscar caminho</button>
+    </div>
+
+    <div id="rotasDisponiveis">
+        <h1>Rotas:</h1>
+        <div id="infoSourceTarget"><div id="source"></div>=><div id="target"></div></div>
+        <div id="routes"></div>
+    </div>
+
+    <a href="{% url 'new_graph' %}">Adicionar Graph</a>
+    <br><br>
+
+    <script>
+        var grafosDisponiveis = {};
+        const informarGrafosDisponiveis = document.querySelector(".grafosDisponiveis .content_grafos");
+        fetch("/graph/api")
+        .then(Response => Response.json())
+        .then(all_graphs_and_routes => {
+            all_graphs_and_routes.forEach(graph_and_route => {
+                const grafosDisponiveis = document.createElement('div');
+                grafosDisponiveis.classList = 'grafo';
+                grafosDisponiveis.innerHTML = `Id: ${graph_and_route['graphId']}`;
+                informarGrafosDisponiveis.append(grafosDisponiveis);
+
+                graph_and_route['routes'].forEach(route => {
+                    const content_graph = document.createElement('div');
+                    content_graph.classList = "content_graph";
+
+                    const source = document.createElement('div');
+                    source.classList = "source";
+                    source.innerHTML += `<strong>Source: </strong>${route.source}`;
+
+                    const target = document.createElement('div');
+                    target.classList = "target";
+                    target.innerHTML += `<strong>Target: </strong>${route.target}`;
+
+                    const distance = document.createElement('div');
+                    distance.classList = "distance";
+                    distance.innerHTML += `<strong>Distance: </strong>${route.distance}`;
+
+                    const graphId = document.createElement('div');
+                    graphId.classList = "graphId";
+                    graphId.innerHTML += `<strong>Graph Id: </strong>${route.graphId}`;
+
+                    content_graph.append(source, target, distance, graphId);
+
+                    document.querySelector(".content_all_graph").append(content_graph);
+                });
+            });
+        });
+
+        function criarElemento(route) {
+            const routeDivElement = document.createElement('div');
+            routeDivElement.innerHTML = route;
+            routeDivElement.id = "rota";
+            rotasDisponiveis.append(routeDivElement);
+        }
+        
+        const rotasDisponiveis = document.querySelector("#rotasDisponiveis #routes");
+        const infoSource = document.querySelector("#infoSourceTarget #source");
+        const infoTarget = document.querySelector("#infoSourceTarget #target");
+        const buscar_caminho_button = document.getElementById("buscar_caminho_button");
+        
+        buscar_caminho_button.addEventListener("click", () => {
+            const input_graphId = document.querySelector(".input_graphId").value.toUpperCase();
+            const input_source = document.querySelector(".input_source").value.toUpperCase();
+            const input_target = document.querySelector(".input_target").value.toUpperCase();
+            const maxStops = document.getElementById("maxStops").value;
+            const routesOrDistance = document.getElementById('rotasDistancia').value;
+
+            infoSource.innerHTML = input_source[0];
+            infoTarget.innerHTML = input_target[0];
+            rotasDisponiveis.innerHTML = "";
+
+            console.log(`fetch: /${routesOrDistance}/${input_graphId}/from/${input_source[0]}/to/${input_target[0]}?maxStops=${maxStops}`)
+
+            if (input_source == input_target) {
+                criarElemento('As cidades de origem e destino são iguais');
+            } else {
+                fetch(`/${routesOrDistance}/${input_graphId}/from/${input_source[0]}/to/${input_target[0]}?maxStops=${maxStops}`)
+                .then(Response => Response.json())
+                .then(all_routes => {
+                    console.log(all_routes)
+                    if (all_routes.routes == '' || all_routes == -1) {
+                        criarElemento('Sem rotas possíveis');
+                    } else {
+                        try {
+                            all_routes['routes'].forEach(route => {criarElemento(`Rota: ${route.route}. Paradas: ${route.stops}`);});
+                        } catch(e) {
+                            if (routesOrDistance == 'distance') {criarElemento(`Path: ${all_routes.path}. Distancia: ${all_routes.distance}`);};
+                        };
+                    };
+                });
+            };
+        });
+    </script>
+</body>
+</html>
+
+
+<!--
+
+fetch('/graph/api')
+.then(Response => Response.json())
+.then(all_graphs => {
+    all_graphs.forEach(graph => {
+        if (parseInt(graph['graphId']) == parseInt(input_graphId)) {
+            graph.routes.forEach(route => {
+                if (route.source == input_source && route.target == input_target) {
+                    informarRota(`${route.source}${route.target}`);
+                } else if (route.source == input_source) {
+                    graph.routes.forEach(route_StopTwo => {
+                        if (route.target == route_StopTwo.source) {
+                            if (route_StopTwo.target == input_target) {
+                                informarRota(`${route.source}${route_StopTwo.source}${route_StopTwo.target}`);
+                            } else {
+                                graph.routes.forEach(route_StopThree => {
+                                    if (route_StopThree.source == route_StopTwo.target && route_StopThree.target == input_target) {
+                                        informarRota(`${route.source}${route_StopTwo.source}${route_StopThree.source}${route_StopThree.target}`);
+                                    };
+                                });
+                            };
+                        };
+                    });
+                };
+            });
+        };
+    });
+});
+
+
+-->
